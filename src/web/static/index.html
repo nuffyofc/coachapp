@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Coach Training Desk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="nav">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <div>
+          <strong>Coach Desk</strong>
+          <small>Training monitor</small>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-btn active" data-view="squad">Squad board</button>
+        <button class="nav-btn" data-view="sessions">Session logs</button>
+        <button class="nav-btn" data-view="player">Player focus</button>
+      </nav>
+      <div class="nav-foot">
+        <label class="toggle">
+          <span>Detail</span>
+          <select id="persona">
+            <option value="coach">Coach</option>
+            <option value="fan">Simple</option>
+          </select>
+        </label>
+      </div>
+    </aside>
+
+    <main>
+      <header class="top">
+        <div>
+          <h1 id="page-title">Squad board</h1>
+          <p id="insight" class="insight">Loading training picture…</p>
+        </div>
+        <div class="top-actions">
+          <span id="form-pill" class="pill yellow">—</span>
+          <button type="button" class="btn" id="refresh-btn">Refresh</button>
+        </div>
+      </header>
+
+      <section id="view-squad" class="view active">
+        <div class="grid-stats" id="radar-wrap">
+          <article class="panel">
+            <h2>Squad skill averages</h2>
+            <canvas id="radar" width="360" height="280" aria-label="Skill radar"></canvas>
+          </article>
+          <article class="panel">
+            <h2>Form distribution</h2>
+            <canvas id="bars" width="360" height="280" aria-label="Form bars"></canvas>
+          </article>
+        </div>
+        <article class="panel">
+          <div class="panel-head">
+            <h2>Players</h2>
+            <input id="player-filter" type="search" placeholder="Filter by name…" />
+          </div>
+          <div class="player-grid" id="player-grid"></div>
+        </article>
+      </section>
+
+      <section id="view-sessions" class="view">
+        <div class="split">
+          <article class="panel">
+            <h2>Sessions</h2>
+            <ul class="session-list" id="session-list"></ul>
+          </article>
+          <article class="panel">
+            <h2 id="session-detail-title">Pick a session</h2>
+            <p id="session-detail-insight" class="muted">Logs after each training appear here.</p>
+            <div class="pitch-wrap">
+              <svg id="pitch" viewBox="0 0 105 68" role="img" aria-label="Player positions"></svg>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    <th>Overall</th>
+                    <th>Sta</th>
+                    <th>Pow</th>
+                    <th>Sht</th>
+                    <th>Fin</th>
+                    <th>Pas</th>
+                    <th>Dri</th>
+                    <th>Call</th>
+                  </tr>
+                </thead>
+                <tbody id="session-logs"></tbody>
+              </table>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-player" class="view">
+        <div class="split">
+          <article class="panel">
+            <h2>Select player</h2>
+            <div class="stack-btns" id="player-picker"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-head">
+              <h2 id="player-name">Player</h2>
+              <span id="player-pill" class="pill yellow">—</span>
+            </div>
+            <p id="player-insight" class="insight"></p>
+            <canvas id="trend" width="640" height="180" aria-label="Form trend"></canvas>
+            <div class="stat-row" id="player-stats"></div>
+            <h3>Session history</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Session</th>
+                    <th>Overall</th>
+                    <th>Verdict</th>
+                    <th>Distance</th>
+                  </tr>
+                </thead>
+                <tbody id="player-history"></tbody>
+              </table>
+            </div>
+            <form id="note-form" class="note-form">
+              <label for="note-text">Add coach note</label>
+              <div class="note-row">
+                <input id="note-text" type="text" placeholder="e.g. Needs more rest before Saturday" required />
+                <button class="btn primary" type="submit">Save note</button>
+              </div>
+            </form>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

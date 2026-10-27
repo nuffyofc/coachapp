@@ -1,0 +1,14 @@
+name: deploy-azure
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Placeholder
+        run: |
+          echo "Wire azd / Bicep deploy after domain MVP is ready."
+          echo "Local check: az bicep build --file infra/main.bicep"

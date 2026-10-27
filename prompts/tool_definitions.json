@@ -1,0 +1,15 @@
+{
+  "tools": [
+    {
+      "name": "run_metrics",
+      "description": "Placeholder MCP tool — bind to src.analytics.metrics once domain logic exists.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query_id": { "type": "string" }
+        },
+        "required": ["query_id"]
+      }
+    }
+  ]
+}
