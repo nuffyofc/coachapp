@@ -43,6 +43,12 @@ def test_session_logs_and_positions():
     assert facts["logs"]
     assert facts["positions"]
     assert "pos_x_m" in facts["logs"][0] or "overall" in facts["logs"][0]
+    assert all("jersey" in row for row in facts["logs"])
+    assert all(p.get("jersey") is not None for p in facts["positions"])
+    assert all(p.get("line") in ("GK", "DF", "MF", "FW") for p in facts["positions"])
+    # Formation board: players share discrete X lanes, not random scatter
+    xs = {round(float(p["x"]), 1) for p in facts["positions"]}
+    assert len(xs) <= 8
 
 
 def test_compute_facts_routes():

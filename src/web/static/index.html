@@ -39,7 +39,7 @@
       <header class="top">
         <div>
           <h1 id="page-title">Squad board</h1>
-          <p id="insight" class="insight">Loading training picture…</p>
+          <p id="insight" class="insight">Opening squad view…</p>
         </div>
         <div class="top-actions">
           <span id="form-pill" class="pill yellow">—</span>
@@ -68,37 +68,59 @@
       </section>
 
       <section id="view-sessions" class="view">
-        <div class="split">
-          <article class="panel">
-            <h2>Sessions</h2>
-            <ul class="session-list" id="session-list"></ul>
-          </article>
-          <article class="panel">
-            <h2 id="session-detail-title">Pick a session</h2>
-            <p id="session-detail-insight" class="muted">Logs after each training appear here.</p>
-            <div class="pitch-wrap">
-              <svg id="pitch" viewBox="0 0 105 68" role="img" aria-label="Player positions"></svg>
+        <article class="panel session-picker-panel">
+          <div class="panel-head">
+            <h2>Choose a session</h2>
+            <label class="session-select-label" for="session-select">
+              <span class="sr-only">Training session</span>
+              <select id="session-select" aria-label="Training session"></select>
+            </label>
+          </div>
+          <div class="session-chips" id="session-chips" role="listbox" aria-label="Recent sessions"></div>
+        </article>
+
+        <article class="panel session-detail-panel">
+          <div class="session-summary" id="session-summary">
+            <div>
+              <h2 id="session-detail-title">Pick a session</h2>
+              <p id="session-detail-insight" class="muted">Select a training above to see who played and how they scored.</p>
             </div>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    <th>Overall</th>
-                    <th>Sta</th>
-                    <th>Pow</th>
-                    <th>Sht</th>
-                    <th>Fin</th>
-                    <th>Pas</th>
-                    <th>Dri</th>
-                    <th>Call</th>
-                  </tr>
-                </thead>
-                <tbody id="session-logs"></tbody>
-              </table>
+            <div class="session-meta" id="session-meta" hidden>
+              <span class="meta-chip" id="session-date-chip">—</span>
+              <span class="meta-chip" id="session-intensity-chip">—</span>
+              <span class="meta-chip" id="session-avg-chip">—</span>
+              <span id="session-form-pill" class="pill yellow">—</span>
             </div>
-          </article>
-        </div>
+          </div>
+
+          <h3 class="section-label">Formation board</h3>
+          <div class="pitch-wrap" id="pitch-wrap">
+            <svg id="pitch" viewBox="0 0 105 68" role="img" aria-label="Fixed formation with shirt numbers"></svg>
+            <div id="pitch-popover" class="pitch-popover" hidden></div>
+          </div>
+
+          <h3 class="section-label">Player logs</h3>
+          <div class="table-wrap">
+            <table class="session-table">
+              <thead>
+                <tr>
+                  <th class="col-num">#</th>
+                  <th>Player</th>
+                  <th>Pos</th>
+                  <th>Overall</th>
+                  <th>Sta</th>
+                  <th>Pow</th>
+                  <th>Sht</th>
+                  <th>Fin</th>
+                  <th>Pas</th>
+                  <th>Dri</th>
+                  <th>Call</th>
+                </tr>
+              </thead>
+              <tbody id="session-logs"></tbody>
+            </table>
+          </div>
+        </article>
       </section>
 
       <section id="view-player" class="view">

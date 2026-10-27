@@ -187,20 +187,63 @@ def session_summary(session_id: str) -> dict[str, Any]:
             "avg_overall": avg_overall,
             "form_flag": _form_flag(avg_overall, poor, len(logs)),
             "logs": logs,
-            "positions": [
-                {
-                    "player_id": x["player_id"],
-                    "name": x["name"],
-                    "x": x["pos_x_m"],
-                    "y": x["pos_y_m"],
-                    "overall": x["overall"],
-                    "verdict": x["verdict"],
-                }
-                for x in logs
-            ],
+            # Fixed formation board (not random GPS scatter) — jersey always present.
+            "positions": _formation_positions(logs),
         }
     finally:
         con.close()
+
+
+def _formation_positions(logs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Place session players on a basic GK–DF–MF–FW board (pitch 105×68, attack right)."""
+    # Distinct lanes left→right (GK–DF–MF–FW). Never stack two tokens on one point.
+    slots = {
+        "GK": [(10.0, 28.0), (10.0, 40.0)],
+        "DF": [(32.0, 10.0), (32.0, 24.0), (32.0, 38.0), (32.0, 52.0)],
+        "MF": [(55.0, 10.0), (55.0, 24.0), (55.0, 38.0), (55.0, 52.0)],
+        "FW": [(80.0, 14.0), (80.0, 28.0), (80.0, 42.0), (80.0, 56.0)],
+    }
+    order = {"GK": 0, "DF": 1, "MF": 2, "FW": 3}
+    grouped: dict[str, list[dict[str, Any]]] = {"GK": [], "DF": [], "MF": [], "FW": []}
+    for row in logs:
+        pos = str(row.get("position") or "MF").upper()
+        if pos not in grouped:
+            pos = "MF"
+        grouped[pos].append(row)
+
+    out: list[dict[str, Any]] = []
+    for pos in ("GK", "DF", "MF", "FW"):
+        band = slots[pos]
+        for i, row in enumerate(sorted(grouped[pos], key=lambda r: int(r.get("jersey") or 0))):
+            if i < len(band):
+                x, y = band[i]
+            else:
+                # Overflow: nudge further up the pitch in the same line
+                base_x = band[-1][0] + 4.0
+                y_vals = [p[1] for p in band]
+                y = y_vals[i % len(y_vals)]
+                x = base_x
+            out.append(
+                {
+                    "player_id": row["player_id"],
+                    "name": row["name"],
+                    "position": row.get("position"),
+                    "jersey": int(row["jersey"]),
+                    "x": round(x, 1),
+                    "y": round(y, 1),
+                    "overall": row["overall"],
+                    "verdict": row["verdict"],
+                    "stamina": row.get("stamina"),
+                    "power": row.get("power"),
+                    "shooting": row.get("shooting"),
+                    "finishing": row.get("finishing"),
+                    "passing": row.get("passing"),
+                    "dribbling": row.get("dribbling"),
+                    "line": pos,
+                    "line_order": order[pos],
+                }
+            )
+    return out
 
 
 def list_sessions() -> list[dict[str, Any]]:

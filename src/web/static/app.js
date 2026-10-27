@@ -148,22 +148,184 @@ function drawTrend(canvas, trend) {
   });
 }
 
-function drawPitch(positions) {
-  const svg = $("#pitch");
-  svg.innerHTML = `
-    <rect width="105" height="68" fill="#1a5c38"/>
-    <rect x="0.5" y="0.5" width="104" height="67" fill="none" stroke="#d7ffe8" stroke-width="0.6" opacity="0.7"/>
-    <line x1="52.5" y1="0" x2="52.5" y2="68" stroke="#d7ffe8" stroke-width="0.4" opacity="0.6"/>
-    <circle cx="52.5" cy="34" r="9.15" fill="none" stroke="#d7ffe8" stroke-width="0.4" opacity="0.6"/>
+function shirtNumber(row) {
+  const n = row?.jersey ?? row?.number ?? row?.shirt;
+  if (n === null || n === undefined || n === "") return null;
+  const num = Number(n);
+  return Number.isFinite(num) ? String(Math.trunc(num)) : String(n);
+}
+
+/** Fallback formation if API positions lack coordinates (offline / old server). */
+const FORMATION_SLOTS = {
+  GK: [[10, 28], [10, 40]],
+  DF: [[32, 10], [32, 24], [32, 38], [32, 52]],
+  MF: [[55, 10], [55, 24], [55, 38], [55, 52]],
+  FW: [[80, 14], [80, 28], [80, 42], [80, 56]],
+};
+
+function pitchMarkersFromSession(facts) {
+  const positions = facts?.positions || [];
+  if (positions.length && positions.every((p) => p.jersey != null && p.x != null)) {
+    return positions;
+  }
+  const logs = facts?.logs || [];
+  const grouped = { GK: [], DF: [], MF: [], FW: [] };
+  logs.forEach((l) => {
+    const pos = String(l.position || "MF").toUpperCase();
+    (grouped[pos] || grouped.MF).push(l);
+  });
+  const out = [];
+  ["GK", "DF", "MF", "FW"].forEach((line) => {
+    const band = FORMATION_SLOTS[line];
+    grouped[line]
+      .slice()
+      .sort((a, b) => Number(a.jersey) - Number(b.jersey))
+      .forEach((l, i) => {
+        const [x, y] = band[Math.min(i, band.length - 1)];
+        out.push({
+          player_id: l.player_id,
+          name: l.name,
+          position: l.position,
+          jersey: l.jersey,
+          x: i < band.length ? x : x + 4,
+          y,
+          overall: l.overall,
+          verdict: l.verdict,
+          stamina: l.stamina,
+          power: l.power,
+          shooting: l.shooting,
+          finishing: l.finishing,
+          passing: l.passing,
+          dribbling: l.dribbling,
+          line,
+        });
+      });
+  });
+  return out;
+}
+
+function hidePitchPopover() {
+  const pop = $("#pitch-popover");
+  if (pop) pop.hidden = true;
+}
+
+function showPitchPopover(marker, clientX, clientY) {
+  const pop = $("#pitch-popover");
+  const wrap = $("#pitch-wrap");
+  if (!pop || !wrap) return;
+  const num = shirtNumber(marker) || "—";
+  const stats = ["overall", "stamina", "power", "shooting", "finishing", "passing", "dribbling"]
+    .filter((k) => marker[k] != null)
+    .map((k) => `<div><span>${k}</span> <b>${marker[k]}</b></div>`)
+    .join("");
+  pop.innerHTML = `
+    <strong>#${num} ${marker.name || ""}</strong>
+    <div class="pop-meta">${marker.position || marker.line || "—"} · ${marker.verdict || "—"}</div>
+    <div class="pop-stats">${stats}</div>
   `;
-  (positions || []).forEach((p) => {
+  pop.hidden = false;
+  const rect = wrap.getBoundingClientRect();
+  let left = clientX - rect.left + 12;
+  let top = clientY - rect.top + 12;
+  pop.style.left = "0px";
+  pop.style.top = "0px";
+  const pw = pop.offsetWidth;
+  const ph = pop.offsetHeight;
+  if (left + pw > rect.width - 8) left = Math.max(8, rect.width - pw - 8);
+  if (top + ph > rect.height - 8) top = Math.max(8, clientY - rect.top - ph - 12);
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top}px`;
+}
+
+function drawPitch(markers) {
+  const svg = $("#pitch");
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  hidePitchPopover();
+
+  const ns = "http://www.w3.org/2000/svg";
+  const add = (tag, attrs = {}) => {
+    const el = document.createElementNS(ns, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, String(v)));
+    svg.appendChild(el);
+    return el;
+  };
+
+  add("rect", { width: 105, height: 68, fill: "#1a5c38" });
+  add("rect", {
+    x: 0.5, y: 0.5, width: 104, height: 67,
+    fill: "none", stroke: "#d7ffe8", "stroke-width": 0.6, opacity: 0.7,
+  });
+  add("line", {
+    x1: 52.5, y1: 0, x2: 52.5, y2: 68,
+    stroke: "#d7ffe8", "stroke-width": 0.4, opacity: 0.6,
+  });
+  add("circle", {
+    cx: 52.5, cy: 34, r: 9.15,
+    fill: "none", stroke: "#d7ffe8", "stroke-width": 0.4, opacity: 0.6,
+  });
+  // Goal mouths (left = GK side)
+  add("rect", {
+    x: 0.5, y: 24, width: 5.5, height: 20,
+    fill: "none", stroke: "#d7ffe8", "stroke-width": 0.35, opacity: 0.55,
+  });
+  add("rect", {
+    x: 99, y: 24, width: 5.5, height: 20,
+    fill: "none", stroke: "#d7ffe8", "stroke-width": 0.35, opacity: 0.55,
+  });
+
+  (markers || []).forEach((p) => {
     const color = p.verdict === "good" ? "#3dd68c" : p.verdict === "poor" ? "#ff6b6b" : "#e6c35c";
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.innerHTML = `
-      <circle cx="${p.x}" cy="${p.y}" r="2.2" fill="${color}" stroke="#062314" stroke-width="0.35"/>
-      <title>${p.name} · ${p.overall}</title>
-    `;
+    const num = shirtNumber(p) || "·";
+    const g = document.createElementNS(ns, "g");
+    g.classList.add("pitch-token");
+    g.setAttribute("tabindex", "0");
+    g.setAttribute("role", "button");
+    g.setAttribute("aria-label", `#${num} ${p.name || ""} stats`);
+    g.dataset.playerId = p.player_id || "";
     svg.appendChild(g);
+
+    const circle = document.createElementNS(ns, "circle");
+    circle.setAttribute("cx", p.x);
+    circle.setAttribute("cy", p.y);
+    circle.setAttribute("r", "3.4");
+    circle.setAttribute("fill", color);
+    circle.setAttribute("stroke", "#062314");
+    circle.setAttribute("stroke-width", "0.45");
+    g.appendChild(circle);
+
+    const text = document.createElementNS(ns, "text");
+    text.setAttribute("x", p.x);
+    text.setAttribute("y", p.y);
+    text.setAttribute("text-anchor", "middle");
+    text.setAttribute("dominant-baseline", "central");
+    text.setAttribute("font-size", "2.7");
+    text.setAttribute("font-weight", "700");
+    text.setAttribute("fill", "#062314");
+    text.style.pointerEvents = "none";
+    text.textContent = num;
+    g.appendChild(text);
+
+    const open = (evt) => {
+      evt.preventDefault();
+      const pt = evt.clientX != null ? evt : (evt.touches && evt.touches[0]);
+      if (pt) showPitchPopover(p, pt.clientX, pt.clientY);
+    };
+    g.addEventListener("mouseenter", open);
+    g.addEventListener("mousemove", open);
+    g.addEventListener("mouseleave", hidePitchPopover);
+    g.addEventListener("click", (evt) => {
+      open(evt);
+      if (p.player_id) {
+        state.selectedPlayer = p.player_id;
+        // Keep popover; also jump to player focus on double-intent via focus view
+      }
+    });
+    g.addEventListener("keydown", (evt) => {
+      if (evt.key === "Enter" || evt.key === " ") {
+        const rect = g.getBoundingClientRect();
+        showPitchPopover(p, rect.left + rect.width / 2, rect.top);
+      }
+    });
   });
 }
 
@@ -199,19 +361,36 @@ function renderPlayerGrid(players) {
 }
 
 function renderSessionList(sessions) {
-  const ul = $("#session-list");
-  ul.innerHTML = sessions
+  const select = $("#session-select");
+  const chips = $("#session-chips");
+  if (!select || !chips) return;
+
+  select.innerHTML = sessions
     .map(
-      (s) => `
-      <li>
-        <button data-session="${s.session_id}" class="${state.selectedSession === s.session_id ? "active" : ""}">
-          <strong>${s.title}</strong>
-          <small>${s.date} · intensity ${s.intensity}/5 · avg ${s.avg_overall ?? "—"}</small>
-        </button>
-      </li>`
+      (s) =>
+        `<option value="${s.session_id}" ${
+          state.selectedSession === s.session_id ? "selected" : ""
+        }>${s.date} — ${s.title}</option>`
     )
     .join("");
-  ul.querySelectorAll("[data-session]").forEach((btn) => {
+
+  // Show a short chip row (newest first already from API); keep page scannable.
+  const shown = sessions.slice(0, 8);
+  chips.innerHTML = shown
+    .map(
+      (s) => `
+      <button type="button" class="session-chip ${
+        state.selectedSession === s.session_id ? "active" : ""
+      }" data-session="${s.session_id}" role="option" aria-selected="${
+        state.selectedSession === s.session_id
+      }">
+        <strong>${s.title}</strong>
+        <small>${s.date} · int ${s.intensity}/5</small>
+      </button>`
+    )
+    .join("");
+
+  chips.querySelectorAll("[data-session]").forEach((btn) => {
     btn.addEventListener("click", () => loadSession(btn.dataset.session));
   });
 }
@@ -251,9 +430,8 @@ async function loadSquad() {
 async function loadSessions() {
   state.sessions = await api("/api/sessions");
   renderSessionList(state.sessions);
-  if (!state.selectedSession && state.sessions.length) {
-    await loadSession(state.sessions[0].session_id);
-  }
+  const id = state.selectedSession || state.sessions[0]?.session_id;
+  if (id) await loadSession(id);
 }
 
 async function loadSession(sessionId) {
@@ -261,14 +439,37 @@ async function loadSession(sessionId) {
   renderSessionList(state.sessions);
   const data = await api(`/api/session/${sessionId}?persona=${persona()}`);
   const f = data.facts;
-  $("#session-detail-title").textContent = `${f.title} · ${f.date}`;
+  if (f.error) {
+    $("#session-detail-insight").textContent = "Could not load that session.";
+    return;
+  }
+
+  $("#session-detail-title").textContent = f.title;
   $("#session-detail-insight").textContent = data.explanation.text;
-  drawPitch(f.positions);
+
+  const meta = $("#session-meta");
+  meta.hidden = false;
+  $("#session-date-chip").textContent = f.date;
+  $("#session-intensity-chip").textContent = `Intensity ${f.intensity}/5 · ${f.duration_min} min`;
+  $("#session-avg-chip").textContent = `Squad avg ${f.avg_overall}`;
+  setPill($("#session-form-pill"), f.form_flag);
+
+  // Always refresh the page header when session data arrives (not only if already on Sessions).
+  if (state.view === "sessions") {
+    $("#insight").textContent = data.explanation.text;
+    setPill($("#form-pill"), f.form_flag);
+  }
+
+  // Use logs for pitch markers — they always include jersey + coordinates.
+  drawPitch(pitchMarkersFromSession(f));
   $("#session-logs").innerHTML = (f.logs || [])
-    .map(
-      (l) => `
+    .map((l) => {
+      const num = shirtNumber(l) || "—";
+      return `
       <tr>
-        <td>${l.name}</td>
+        <td class="shirt-num">${num}</td>
+        <td class="player-cell">${l.name}</td>
+        <td class="pos-cell">${l.position || "—"}</td>
         <td>${l.overall}</td>
         <td>${l.stamina}</td>
         <td>${l.power}</td>
@@ -277,8 +478,8 @@ async function loadSession(sessionId) {
         <td>${l.passing}</td>
         <td>${l.dribbling}</td>
         <td class="verdict-${l.verdict}">${l.verdict}</td>
-      </tr>`
-    )
+      </tr>`;
+    })
     .join("");
 }
 
@@ -335,6 +536,9 @@ async function boot() {
   });
   $("#refresh-btn").addEventListener("click", () => bootData());
   $("#persona").addEventListener("change", () => bootData());
+  $("#session-select")?.addEventListener("change", (e) => {
+    if (e.target.value) loadSession(e.target.value);
+  });
   $("#player-filter").addEventListener("input", () => {
     if (state.squad?.facts?.players) renderPlayerGrid(state.squad.facts.players);
   });
@@ -355,11 +559,30 @@ async function boot() {
 }
 
 async function bootData() {
-  await loadSquad();
-  await loadSessions();
-  if (state.selectedPlayer) await loadPlayer(state.selectedPlayer);
+  try {
+    await loadSquad();
+  } catch (err) {
+    $("#insight").textContent = `Squad data failed: ${err.message}`;
+    console.error(err);
+  }
+  try {
+    await loadSessions();
+  } catch (err) {
+    const msg = `Session logs failed: ${err.message}`;
+    if (state.view === "sessions") $("#insight").textContent = msg;
+    $("#session-detail-insight").textContent = msg;
+    console.error(err);
+  }
+  if (state.selectedPlayer) {
+    try {
+      await loadPlayer(state.selectedPlayer);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 }
 
 boot().catch((err) => {
   $("#insight").textContent = `Failed to load: ${err.message}`;
+  console.error(err);
 });
